@@ -47,6 +47,7 @@ def get_gpu_data():
             gpu = gpus[0]
             return {
                 "usage": f"{gpu.load * 100:.1f}%",
+                "raw_percent": gpu.load * 100,
                 "vram_used": f"{gpu.memoryUsed}MB",
                 "vram_total": f"{gpu.memoryTotal}MB",
                 "temp": f"{gpu.temperature}°C"
@@ -54,15 +55,6 @@ def get_gpu_data():
         return None
     except Exception:
         return None
-
-def generate_progress_bar(percent, length=20):
-    if not isinstance(percent, (int, float)):
-        return f"[{' '*length}]"
-    filled_length = int(length * percent // 100)
-    filled_length = max(0, min(length, filled_length))
-    empty_length = length - filled_length
-    # Using a distinct vertical bar 
-    return f"[{'❚'*filled_length}{' '*empty_length}]"
 
 def bg_monitor():
     psutil.cpu_percent(interval=None)
@@ -105,7 +97,7 @@ HTML_TEMPLATE = """
         font-family: monospace; 
         margin: 0;
         padding: 12px;
-        font-size: 24px; /* Increased font size */
+        font-size: 24px;
         line-height: 1.3;
     }
     .card {
@@ -113,10 +105,30 @@ HTML_TEMPLATE = """
         margin-bottom: 20px;
         padding: 12px;
         box-sizing: border-box;
+        display: flex;
+        justify-content: space-between;
+    }
+    .card-content {
+        flex: 1;
+        padding-right: 15px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    .meter-container {
+        width: 40px;
+        border: 2px solid #ffffff;
+        background-color: #000000;
+        display: flex;
+        align-items: flex-end;
+    }
+    .meter-fill {
+        width: 100%;
+        background-color: #ffffff;
     }
     .card-title {
         font-weight: bold;
-        font-size: 26px; /* Increased font size */
+        font-size: 26px;
         margin-bottom: 12px;
         border-bottom: 2px dashed #ffffff;
         padding-bottom: 6px;
@@ -128,12 +140,6 @@ HTML_TEMPLATE = """
         margin-bottom: 8px;
     }
     .val {
-        font-weight: bold;
-    }
-    .bar {
-        font-size: 22px;
-        letter-spacing: 2px; /* Spaced out slightly to show individual vertical bars */
-        margin: 10px 0;
         font-weight: bold;
     }
     .cores-grid {
@@ -157,25 +163,38 @@ HTML_TEMPLATE = """
 <body id="body">
     
     <div class="card" id="cpu_card">
-        <div class="card-title">CPU</div>
-        <div class="row"><span>LOAD</span> <span class="val" id="cpu_overall">--%</span></div>
-        <div class="row bar" id="cpu_bar">[                    ]</div>
-        <div class="row hidden" id="cpu_temp_row"><span>TEMP</span> <span class="val" id="cpu_temp">--°C</span></div>
-        <div class="cores-grid" id="cpu_cores_container"></div>
+        <div class="card-content">
+            <div class="card-title">CPU</div>
+            <div class="row"><span>LOAD</span> <span class="val" id="cpu_overall">--%</span></div>
+            <div class="row hidden" id="cpu_temp_row"><span>TEMP</span> <span class="val" id="cpu_temp">--°C</span></div>
+            <div class="cores-grid" id="cpu_cores_container"></div>
+        </div>
+        <div class="meter-container">
+            <div class="meter-fill" id="cpu_meter" style="height: 0%;"></div>
+        </div>
     </div>
     
     <div class="card" id="ram_card">
-        <div class="card-title">RAM</div>
-        <div class="row"><span>LOAD</span> <span class="val" id="ram_percent">--%</span></div>
-        <div class="row bar" id="ram_bar">[                    ]</div>
-        <div class="row"><span>USED</span> <span class="val" id="ram_used_total">-- / --GB</span></div>
+        <div class="card-content">
+            <div class="card-title">RAM</div>
+            <div class="row"><span>LOAD</span> <span class="val" id="ram_percent">--%</span></div>
+            <div class="row"><span>USED</span> <span class="val" id="ram_used_total">-- / --GB</span></div>
+        </div>
+        <div class="meter-container">
+            <div class="meter-fill" id="ram_meter" style="height: 0%;"></div>
+        </div>
     </div>
     
     <div class="card hidden" id="gpu_card">
-        <div class="card-title">GPU</div>
-        <div class="row"><span>LOAD</span> <span class="val" id="gpu_usage">--%</span></div>
-        <div class="row"><span>VRAM</span> <span class="val" id="gpu_vram">--MB / --MB</span></div>
-        <div class="row"><span>TEMP</span> <span class="val" id="gpu_temp">--°C</span></div>
+        <div class="card-content">
+            <div class="card-title">GPU</div>
+            <div class="row"><span>LOAD</span> <span class="val" id="gpu_usage">--%</span></div>
+            <div class="row"><span>VRAM</span> <span class="val" id="gpu_vram">--MB / --MB</span></div>
+            <div class="row"><span>TEMP</span> <span class="val" id="gpu_temp">--°C</span></div>
+        </div>
+        <div class="meter-container">
+            <div class="meter-fill" id="gpu_meter" style="height: 0%;"></div>
+        </div>
     </div>
 
     <script>
@@ -188,7 +207,7 @@ HTML_TEMPLATE = """
                     
                     // Update CPU
                     document.getElementById('cpu_overall').innerText = data.cpu_overall;
-                    document.getElementById('cpu_bar').innerText = data.cpu_bar;
+                    document.getElementById('cpu_meter').style.height = data.cpu_raw_percent + '%';
                     
                     if (data.cpu_temp) {
                         document.getElementById('cpu_temp').innerText = data.cpu_temp;
@@ -206,12 +225,13 @@ HTML_TEMPLATE = """
                     
                     // Update RAM
                     document.getElementById('ram_percent').innerText = data.ram_percent;
-                    document.getElementById('ram_bar').innerText = data.ram_bar;
+                    document.getElementById('ram_meter').style.height = data.ram_raw_percent + '%';
                     document.getElementById('ram_used_total').innerText = data.ram_used + ' / ' + data.ram_total;
                     
                     // Update GPU
                     if (data.gpu) {
                         document.getElementById('gpu_usage').innerText = data.gpu.usage;
+                        document.getElementById('gpu_meter').style.height = data.gpu.raw_percent + '%';
                         document.getElementById('gpu_vram').innerText = data.gpu.vram_used + ' / ' + data.gpu.vram_total;
                         document.getElementById('gpu_temp').innerText = data.gpu.temp;
                         document.getElementById('gpu_card').classList.remove('hidden');
@@ -240,11 +260,11 @@ def data():
     
     return jsonify({
         "cpu_overall": f"{latest_data['cpu_percent']:.1f}%",
-        "cpu_bar": generate_progress_bar(latest_data['cpu_percent'], 20),
+        "cpu_raw_percent": latest_data['cpu_percent'],
         "cpu_temp": latest_data["cpu_temp"],
         "cpu_cores": cpu_cores_formatted,
         "ram_percent": f"{latest_data['ram_percent']:.1f}%",
-        "ram_bar": generate_progress_bar(latest_data['ram_percent'], 20),
+        "ram_raw_percent": latest_data['ram_percent'],
         "ram_used": f"{latest_data['ram_used']:.1f}GB",
         "ram_total": f"{latest_data['ram_total']:.1f}GB",
         "gpu": latest_data["gpu_data"]
