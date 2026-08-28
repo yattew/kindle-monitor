@@ -7,6 +7,9 @@ import psutil
 
 # --- CONFIGURATION CONSTANTS ---
 REFRESH_RATE_SECONDS = 0.3
+FONT_FAMILY = "monospace, sans-serif"
+FONT_WEIGHT_BODY = "600"   # 400 is normal, 600 is semi-bold, 700 is bold
+FONT_WEIGHT_TITLE = "900"  # 900 is ultra-bold
 FONT_SIZE_BODY = "38px"
 FONT_SIZE_TITLE = "46px"
 # -------------------------------
@@ -138,7 +141,8 @@ HTML_TEMPLATE = """
     body {
         background-color: #000000; 
         color: #ffffff; 
-        font-family: monospace; 
+        font-family: {{ FONT_FAMILY }}; 
+        font-weight: {{ FONT_WEIGHT_BODY }};
         padding: 12px;
         box-sizing: border-box;
         
@@ -209,7 +213,7 @@ HTML_TEMPLATE = """
         background-color: #ffffff;
     }
     .card-title {
-        font-weight: bold;
+        font-weight: {{ FONT_WEIGHT_TITLE }};
         font-size: {{ FONT_SIZE_TITLE }};
         margin-bottom: 15px;
         border-bottom: 2px dashed #ffffff;
@@ -226,7 +230,7 @@ HTML_TEMPLATE = """
         margin-bottom: 10px;
     }
     .val {
-        font-weight: bold;
+        font-weight: {{ FONT_WEIGHT_TITLE }};
     }
     .hidden {
         display: none !important;
@@ -319,6 +323,9 @@ HTML_TEMPLATE = """
 def index():
     return render_template_string(
         HTML_TEMPLATE, 
+        FONT_FAMILY=FONT_FAMILY,
+        FONT_WEIGHT_BODY=FONT_WEIGHT_BODY,
+        FONT_WEIGHT_TITLE=FONT_WEIGHT_TITLE,
         FONT_SIZE_BODY=FONT_SIZE_BODY,
         FONT_SIZE_TITLE=FONT_SIZE_TITLE,
         REFRESH_RATE_MS=int(REFRESH_RATE_SECONDS * 1000)
