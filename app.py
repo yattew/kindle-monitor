@@ -73,8 +73,8 @@ def get_gpu_data():
             return {
                 "usage": f"{gpu.load * 100:.1f}%",
                 "raw_percent": gpu.load * 100,
-                "vram_used": f"{gpu.memoryUsed}MB",
-                "vram_total": f"{gpu.memoryTotal}MB",
+                "vram_used": f"{gpu.memoryUsed / 1024.0:.1f}GB",
+                "vram_total": f"{gpu.memoryTotal / 1024.0:.1f}GB",
                 "temp": f"{gpu.temperature}°C"
             }
         return None
@@ -136,7 +136,7 @@ HTML_TEMPLATE = """
         flex-direction: column;
         
         overflow: hidden;
-        font-size: 28px;
+        font-size: 38px; /* Massively increased font size */
         line-height: 1.3;
     }
     .card {
@@ -163,15 +163,29 @@ HTML_TEMPLATE = """
     .card-content {
         flex: 1;
         padding-right: 15px;
+        
+        display: -webkit-box;
+        display: -webkit-flex;
         display: flex;
+        -webkit-box-orient: vertical;
+        -webkit-box-direction: normal;
+        -webkit-flex-direction: column;
         flex-direction: column;
+        
+        -webkit-box-pack: center;
+        -webkit-justify-content: center;
         justify-content: center;
     }
     .meter-container {
-        width: 50px; /* Make the meter a bit wider for larger screens */
+        width: 60px; /* Made even wider */
         border: 2px solid #ffffff;
         background-color: #000000;
+        
+        display: -webkit-box;
+        display: -webkit-flex;
         display: flex;
+        -webkit-box-align: end;
+        -webkit-align-items: flex-end;
         align-items: flex-end;
     }
     .meter-fill {
@@ -180,14 +194,18 @@ HTML_TEMPLATE = """
     }
     .card-title {
         font-weight: bold;
-        font-size: 32px; /* Slightly larger text */
+        font-size: 46px; /* Massively increased text */
         margin-bottom: 15px;
         border-bottom: 2px dashed #ffffff;
         padding-bottom: 8px;
         text-transform: uppercase;
     }
     .row {
+        display: -webkit-box;
+        display: -webkit-flex;
         display: flex;
+        -webkit-box-pack: justify;
+        -webkit-justify-content: space-between;
         justify-content: space-between;
         margin-bottom: 10px;
     }
