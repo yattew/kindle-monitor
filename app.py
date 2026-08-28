@@ -529,8 +529,9 @@ def media_cmd():
         keys = {'next': 0xB0, 'prev': 0xB1, 'playpause': 0xB3}
         if cmd in keys:
             vk = keys[cmd]
-            ctypes.windll.user32.keybd_event(vk, 0, 0, 0) # Key Down
-            ctypes.windll.user32.keybd_event(vk, 0, 2, 0) # Key Up
+            # Media keys are 'Extended Keys' in Windows. We must pass 0x0001 (KEYEVENTF_EXTENDEDKEY)
+            ctypes.windll.user32.keybd_event(vk, 0, 1, 0)       # Key Down (Extended)
+            ctypes.windll.user32.keybd_event(vk, 0, 1 | 2, 0)   # Key Up (Extended + KeyUp)
     return jsonify({"status": "ok"})
 
 @app.route('/set_vol', methods=['POST'])
