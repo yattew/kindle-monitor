@@ -100,8 +100,8 @@ def bg_monitor():
         except Exception as e:
             print("Error in background monitor:", e)
         
-        # Increased refresh frequency to 1 second
-        time.sleep(1)
+        # 0.3 second update interval
+        time.sleep(0.3)
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -117,16 +117,25 @@ HTML_TEMPLATE = """
         font-family: monospace; 
         margin: 0;
         padding: 12px;
-        font-size: 24px;
+        box-sizing: border-box;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        font-size: 28px; /* Slightly larger text */
         line-height: 1.3;
     }
     .card {
         border: 2px solid #ffffff;
-        margin-bottom: 20px;
-        padding: 12px;
+        margin-bottom: 12px;
+        padding: 15px;
         box-sizing: border-box;
         display: flex;
         justify-content: space-between;
+        flex: 1; /* Fill available vertical space */
+    }
+    .card:last-child {
+        margin-bottom: 0; /* Remove bottom margin for the last card to fit perfectly */
     }
     .card-content {
         flex: 1;
@@ -136,7 +145,7 @@ HTML_TEMPLATE = """
         justify-content: center;
     }
     .meter-container {
-        width: 40px;
+        width: 50px; /* Make the meter a bit wider for larger screens */
         border: 2px solid #ffffff;
         background-color: #000000;
         display: flex;
@@ -148,16 +157,16 @@ HTML_TEMPLATE = """
     }
     .card-title {
         font-weight: bold;
-        font-size: 26px;
-        margin-bottom: 12px;
+        font-size: 32px; /* Slightly larger text */
+        margin-bottom: 15px;
         border-bottom: 2px dashed #ffffff;
-        padding-bottom: 6px;
+        padding-bottom: 8px;
         text-transform: uppercase;
     }
     .row {
         display: flex;
         justify-content: space-between;
-        margin-bottom: 8px;
+        margin-bottom: 10px;
     }
     .val {
         font-weight: bold;
@@ -243,8 +252,8 @@ HTML_TEMPLATE = """
         }
 
         updateData();
-        // Increased refresh frequency to 1 second
-        setInterval(updateData, 1000);
+        // 0.3s refresh
+        setInterval(updateData, 300);
     </script>
 </body>
 </html>
