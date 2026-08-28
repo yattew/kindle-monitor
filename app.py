@@ -39,16 +39,23 @@ def get_cpu_temp():
             if hasattr(subprocess, 'CREATE_NO_WINDOW'):
                 creation_flags = subprocess.CREATE_NO_WINDOW
                 
-            # Try OpenHardwareMonitor first, then fallbacks
-            ohm_query = "Get-WmiObject -Namespace root\\OpenHardwareMonitor -Class Sensor | Where-Object { $_.SensorType -eq 'Temperature' -and $_.Name -match 'CPU' } | Select-Object -First 1 -ExpandProperty Value"
+            # Check both LibreHardwareMonitor and OpenHardwareMonitor
+            ohm_queries = [
+                "Get-WmiObject -Namespace root\\LibreHardwareMonitor -Class Sensor | Where-Object { $_.SensorType -eq 'Temperature' -and $_.Identifier -match 'cpu' } | Select-Object -First 1 -ExpandProperty Value",
+                "Get-WmiObject -Namespace root\\OpenHardwareMonitor -Class Sensor | Where-Object { $_.SensorType -eq 'Temperature' -and $_.Identifier -match 'cpu' } | Select-Object -First 1 -ExpandProperty Value"
+            ]
             
-            try:
-                cmd = ["powershell", "-NoProfile", "-Command", ohm_query]
-                output = subprocess.check_output(cmd, text=True, timeout=2, creationflags=creation_flags).strip()
-                if output and output.replace('.', '', 1).isdigit():
-                    return f"{float(output):.1f}°C"
-            except Exception:
-                pass
+            for ohm_query in ohm_queries:
+                try:
+                    cmd = ["powershell", "-NoProfile", "-Command", ohm_query]
+                    output = subprocess.check_output(cmd, text=True, timeout=2, creationflags=creation_flags).strip()
+                    if output:
+                        # Take the first line just in case multiple values were returned
+                        val = output.split('\\n')[0].strip()
+                        if val.replace('.', '', 1).isdigit():
+                            return f"{float(val):.1f}°C"
+                except Exception:
+                    continue
                 
             queries = [
                 "Get-CimInstance -Namespace root/wmi -ClassName MSAcpi_ThermalZoneTemperature | Select-Object -ExpandProperty CurrentTemperature",
