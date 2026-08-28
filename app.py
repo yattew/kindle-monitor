@@ -35,14 +35,15 @@ def get_cpu_temp():
     try:
         if platform.system() == "Windows":
             import subprocess
+            import json
             creation_flags = 0
             if hasattr(subprocess, 'CREATE_NO_WINDOW'):
                 creation_flags = subprocess.CREATE_NO_WINDOW
                 
-            # Check both LibreHardwareMonitor and OpenHardwareMonitor
+            # Check both LibreHardwareMonitor and OpenHardwareMonitor via JSON
             ohm_queries = [
-                "Get-WmiObject -Namespace root\\LibreHardwareMonitor -Class Sensor | Where-Object { $_.SensorType -eq 'Temperature' -and $_.Identifier -match 'cpu' } | Select-Object -First 1 -ExpandProperty Value",
-                "Get-WmiObject -Namespace root\\OpenHardwareMonitor -Class Sensor | Where-Object { $_.SensorType -eq 'Temperature' -and $_.Identifier -match 'cpu' } | Select-Object -First 1 -ExpandProperty Value"
+                "Get-WmiObject -Namespace root\\LibreHardwareMonitor -Class Sensor | Where-Object { $_.SensorType -eq 'Temperature' } | Select-Object Identifier, Name, Value | ConvertTo-Json",
+                "Get-WmiObject -Namespace root\\OpenHardwareMonitor -Class Sensor | Where-Object { $_.SensorType -eq 'Temperature' } | Select-Object Identifier, Name, Value | ConvertTo-Json"
             ]
             
             for ohm_query in ohm_queries:
@@ -50,13 +51,32 @@ def get_cpu_temp():
                     cmd = ["powershell", "-NoProfile", "-Command", ohm_query]
                     output = subprocess.check_output(cmd, text=True, timeout=2, creationflags=creation_flags).strip()
                     if output:
-                        # Take the first line just in case multiple values were returned
-                        val = output.split('\\n')[0].strip()
-                        if val.replace('.', '', 1).isdigit():
-                            return f"{float(val):.1f}°C"
+                        sensors = json.loads(output)
+                        if isinstance(sensors, dict):
+                            sensors = [sensors]
+                            
+                        best_temp = None
+                        for s in sensors:
+                            ident = str(s.get("Identifier") or "").lower()
+                            name = str(s.get("Name") or "").lower()
+                            val = s.get("Value")
+                            
+                            if val is None:
+                                continue
+                                
+                            if "cpu" in ident or "cpu" in name or "tctl" in name or "tdie" in name or "core" in name or "package" in name:
+                                # AMD Ryzen usually uses Tctl/Tdie or Package for the main die temp
+                                if "package" in name or "tctl" in name:
+                                    return f"{float(val):.1f}°C"
+                                if best_temp is None:
+                                    best_temp = float(val)
+                                    
+                        if best_temp is not None:
+                            return f"{best_temp:.1f}°C"
                 except Exception:
                     continue
                 
+            # Final fallback to standard ACPI WMI if LHM/OHM aren't running
             queries = [
                 "Get-CimInstance -Namespace root/wmi -ClassName MSAcpi_ThermalZoneTemperature | Select-Object -ExpandProperty CurrentTemperature",
                 "Get-WmiObject Win32_PerfFormattedData_Counters_ThermalZoneInformation | Select-Object -ExpandProperty HighPrecisionTemperature"
