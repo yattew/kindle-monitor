@@ -26,25 +26,28 @@ def get_cpu_temp():
     try:
         if platform.system() == "Windows":
             import subprocess
-            # Use PowerShell to query WMI for thermal zones (Requires Admin privileges)
-            cmd = [
-                "powershell", "-NoProfile", "-Command", 
-                "Get-CimInstance -Namespace root/wmi -ClassName MSAcpi_ThermalZoneTemperature | Select-Object -ExpandProperty CurrentTemperature"
-            ]
-            
-            # Hide the cmd window popup if running from a GUI context
             creation_flags = 0
             if hasattr(subprocess, 'CREATE_NO_WINDOW'):
                 creation_flags = subprocess.CREATE_NO_WINDOW
                 
-            output = subprocess.check_output(cmd, text=True, timeout=2, creationflags=creation_flags).strip()
-            if output:
-                for line in output.split('\\n'):
-                    val = line.strip()
-                    if val.isdigit():
-                        celsius = (int(val) / 10.0) - 273.15
-                        if 0 < celsius < 150:
-                            return f"{celsius:.1f}°C"
+            queries = [
+                "Get-CimInstance -Namespace root/wmi -ClassName MSAcpi_ThermalZoneTemperature | Select-Object -ExpandProperty CurrentTemperature",
+                "Get-WmiObject Win32_PerfFormattedData_Counters_ThermalZoneInformation | Select-Object -ExpandProperty HighPrecisionTemperature"
+            ]
+            
+            for q in queries:
+                try:
+                    cmd = ["powershell", "-NoProfile", "-Command", q]
+                    output = subprocess.check_output(cmd, text=True, timeout=2, creationflags=creation_flags).strip()
+                    if output:
+                        for line in output.split('\\n'):
+                            val = line.strip()
+                            if val.isdigit():
+                                celsius = (int(val) / 10.0) - 273.15
+                                if 0 < celsius < 150:
+                                    return f"{celsius:.1f}°C"
+                except Exception:
+                    continue
             return None
             
         # Linux/macOS fallback
@@ -111,18 +114,29 @@ HTML_TEMPLATE = """
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Kindle Monitor</title>
 <style>
+    html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+    }
     body {
         background-color: #000000; 
         color: #ffffff; 
         font-family: monospace; 
-        margin: 0;
         padding: 12px;
         box-sizing: border-box;
-        height: 100vh;
+        
+        /* Legacy WebKit Flexbox for older Kindles */
+        display: -webkit-box;
+        display: -webkit-flex;
         display: flex;
+        -webkit-box-orient: vertical;
+        -webkit-box-direction: normal;
+        -webkit-flex-direction: column;
         flex-direction: column;
+        
         overflow: hidden;
-        font-size: 28px; /* Slightly larger text */
+        font-size: 28px;
         line-height: 1.3;
     }
     .card {
@@ -130,9 +144,18 @@ HTML_TEMPLATE = """
         margin-bottom: 12px;
         padding: 15px;
         box-sizing: border-box;
+        
+        display: -webkit-box;
+        display: -webkit-flex;
         display: flex;
+        -webkit-box-pack: justify;
+        -webkit-justify-content: space-between;
         justify-content: space-between;
-        flex: 1; /* Fill available vertical space */
+        
+        /* Flex grow to fill vertical space */
+        -webkit-box-flex: 1;
+        -webkit-flex: 1;
+        flex: 1;
     }
     .card:last-child {
         margin-bottom: 0; /* Remove bottom margin for the last card to fit perfectly */
