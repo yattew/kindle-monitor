@@ -2,7 +2,7 @@ import os
 import time
 import platform
 import threading
-from flask import Flask, render_template_string, jsonify
+from flask import Flask, render_template_string, jsonify, request
 import psutil
 
 # --- CONFIGURATION CONSTANTS ---
@@ -10,8 +10,8 @@ REFRESH_RATE_SECONDS = 0.3
 FONT_FAMILY = "monospace, sans-serif"
 FONT_WEIGHT_BODY = "600"   # 400 is normal, 600 is semi-bold, 700 is bold
 FONT_WEIGHT_TITLE = "900"  # 900 is ultra-bold
-FONT_SIZE_BODY = "38px"
-FONT_SIZE_TITLE = "46px"
+FONT_SIZE_BODY = "22px"
+FONT_SIZE_TITLE = "28px"
 # -------------------------------
 
 app = Flask(__name__)
