@@ -205,7 +205,6 @@ HTML_TEMPLATE = """
         padding: 12px;
         box-sizing: border-box;
         
-        /* Legacy WebKit Flexbox for older Kindles */
         display: -webkit-box;
         display: -webkit-flex;
         display: flex;
@@ -215,120 +214,183 @@ HTML_TEMPLATE = """
         flex-direction: column;
         
         overflow: hidden;
-        font-size: {{ FONT_SIZE_BODY }};
-        line-height: 1.3;
+        line-height: 1.2;
     }
-    .card {
-        border: 2px solid #ffffff;
-        margin-bottom: 12px;
-        padding: 15px;
-        box-sizing: border-box;
-        
+    
+    /* --- TOP SECTION: MONITORS --- */
+    .monitor-container {
+        display: -webkit-box;
+        display: -webkit-flex;
+        display: flex;
+        -webkit-box-orient: vertical;
+        -webkit-flex-direction: column;
+        flex-direction: column;
+        margin-bottom: 20px;
+        border-bottom: 2px dashed #555;
+        padding-bottom: 15px;
+    }
+    .tiny-card {
         display: -webkit-box;
         display: -webkit-flex;
         display: flex;
         -webkit-box-pack: justify;
         -webkit-justify-content: space-between;
         justify-content: space-between;
-        
-        /* Flex grow to fill vertical space */
+        font-size: 24px;
+        margin-bottom: 8px;
+    }
+    .tiny-title {
+        font-weight: {{ FONT_WEIGHT_TITLE }};
+        color: #aaa;
+        width: 60px;
+    }
+    .tiny-val {
+        font-weight: bold;
+    }
+    .hidden {
+        display: none !important;
+    }
+    
+    /* --- BOTTOM SECTION: MEDIA --- */
+    .media-container {
         -webkit-box-flex: 1;
         -webkit-flex: 1;
         flex: 1;
-    }
-    .card:last-child {
-        margin-bottom: 0; /* Remove bottom margin for the last card to fit perfectly */
-    }
-    .card-content {
-        flex: 1;
-        padding-right: 15px;
         
         display: -webkit-box;
         display: -webkit-flex;
         display: flex;
         -webkit-box-orient: vertical;
-        -webkit-box-direction: normal;
         -webkit-flex-direction: column;
         flex-direction: column;
         
+        -webkit-box-align: center;
+        -webkit-align-items: center;
+        align-items: center;
+        -webkit-box-pack: end;
+        -webkit-justify-content: flex-end;
+        justify-content: flex-end;
+    }
+    .album-art {
+        width: 300px;
+        height: 300px;
+        border: 2px solid #555;
+        margin-bottom: 15px;
+        background-color: #111;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #555;
+        font-size: 20px;
+    }
+    .album-art img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .media-title {
+        font-size: 28px;
+        font-weight: bold;
+        text-align: center;
+        margin-bottom: 25px;
+        width: 100%;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .media-controls {
+        display: -webkit-box;
+        display: -webkit-flex;
+        display: flex;
         -webkit-box-pack: center;
         -webkit-justify-content: center;
         justify-content: center;
-    }
-    .meter-container {
-        width: 60px; /* Made even wider */
-        border: 2px solid #ffffff;
-        background-color: #000000;
-        
-        display: -webkit-box;
-        display: -webkit-flex;
-        display: flex;
-        -webkit-box-align: end;
-        -webkit-align-items: flex-end;
-        align-items: flex-end;
-    }
-    .meter-fill {
         width: 100%;
-        background-color: #ffffff;
+        margin-bottom: 30px;
     }
-    .card-title {
-        font-weight: {{ FONT_WEIGHT_TITLE }};
-        font-size: {{ FONT_SIZE_TITLE }};
-        margin-bottom: 15px;
-        border-bottom: 2px dashed #ffffff;
-        padding-bottom: 8px;
-        text-transform: uppercase;
+    .media-btn {
+        background: transparent;
+        color: #fff;
+        border: 2px solid #fff;
+        font-size: 32px;
+        padding: 15px 35px;
+        margin: 0 10px;
+        cursor: pointer;
     }
-    .row {
-        display: -webkit-box;
-        display: -webkit-flex;
+    .media-btn:active {
+        background: #fff;
+        color: #000;
+    }
+    
+    /* --- VOLUME SLIDER --- */
+    .slider-container {
+        width: 100%;
         display: flex;
-        -webkit-box-pack: justify;
-        -webkit-justify-content: space-between;
-        justify-content: space-between;
+        align-items: center;
         margin-bottom: 10px;
     }
-    .val {
-        font-weight: {{ FONT_WEIGHT_TITLE }};
+    .vol-icon {
+        font-size: 24px;
+        margin-right: 15px;
     }
-    .hidden {
-        display: none !important;
+    .vol-slider {
+        -webkit-appearance: none;
+        width: 100%;
+        height: 8px;
+        background: #555;
+        outline: none;
+        border-radius: 4px;
+    }
+    .vol-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 30px;
+        height: 30px;
+        background: #fff;
+        border-radius: 50%;
+        cursor: pointer;
     }
 </style>
 </head>
 <body id="body">
     
-    <div class="card" id="cpu_card">
-        <div class="card-content">
-            <div class="card-title">CPU</div>
-            <div class="row"><span>LOAD</span> <span class="val" id="cpu_overall">--%</span></div>
-            <div class="row hidden" id="cpu_temp_row"><span>TEMP</span> <span class="val" id="cpu_temp">--°C</span></div>
+    <!-- TOP SECTION: HARDWARE MONITORS -->
+    <div class="monitor-container">
+        <div class="tiny-card" id="cpu_card">
+            <span class="tiny-title">CPU</span>
+            <span class="tiny-val" id="cpu_overall">--%</span>
+            <span class="tiny-val hidden" id="cpu_temp">--°C</span>
         </div>
-        <div class="meter-container">
-            <div class="meter-fill" id="cpu_meter" style="height: 0%;"></div>
+        <div class="tiny-card" id="ram_card">
+            <span class="tiny-title">RAM</span>
+            <span class="tiny-val" id="ram_percent">--%</span>
+            <span class="tiny-val" id="ram_used_total">--GB</span>
         </div>
-    </div>
-    
-    <div class="card" id="ram_card">
-        <div class="card-content">
-            <div class="card-title">RAM</div>
-            <div class="row"><span>LOAD</span> <span class="val" id="ram_percent">--%</span></div>
-            <div class="row"><span>USED</span> <span class="val" id="ram_used_total">-- / --GB</span></div>
-        </div>
-        <div class="meter-container">
-            <div class="meter-fill" id="ram_meter" style="height: 0%;"></div>
+        <div class="tiny-card hidden" id="gpu_card">
+            <span class="tiny-title">GPU</span>
+            <span class="tiny-val" id="gpu_usage">--%</span>
+            <span class="tiny-val" id="gpu_vram">--GB</span>
+            <span class="tiny-val" id="gpu_temp">--°C</span>
         </div>
     </div>
     
-    <div class="card hidden" id="gpu_card">
-        <div class="card-content">
-            <div class="card-title">GPU</div>
-            <div class="row"><span>LOAD</span> <span class="val" id="gpu_usage">--%</span></div>
-            <div class="row"><span>VRAM</span> <span class="val" id="gpu_vram">--GB / --GB</span></div>
-            <div class="row"><span>TEMP</span> <span class="val" id="gpu_temp">--°C</span></div>
+    <!-- BOTTOM SECTION: MEDIA CONTROLS -->
+    <div class="media-container">
+        <div class="album-art">
+            <img id="album_img" src="" alt="No Art" style="display: none;">
+            <span id="album_placeholder">No Media</span>
         </div>
-        <div class="meter-container">
-            <div class="meter-fill" id="gpu_meter" style="height: 0%;"></div>
+        
+        <div class="media-title" id="media_title">Awaiting Media...</div>
+        
+        <div class="media-controls">
+            <button class="media-btn" onclick="sendMediaCmd('prev')">⏮</button>
+            <button class="media-btn" onclick="sendMediaCmd('playpause')">⏯</button>
+            <button class="media-btn" onclick="sendMediaCmd('next')">⏭</button>
+        </div>
+        
+        <div class="slider-container">
+            <span class="vol-icon">🔉</span>
+            <input type="range" min="0" max="100" value="50" class="vol-slider" id="vol_slider" onchange="setVolume(this.value)">
         </div>
     </div>
 
@@ -342,32 +404,36 @@ HTML_TEMPLATE = """
                     
                     // Update CPU
                     document.getElementById('cpu_overall').innerText = data.cpu_overall;
-                    document.getElementById('cpu_meter').style.height = data.cpu_raw_percent + '%';
-                    
                     if (data.cpu_temp) {
                         document.getElementById('cpu_temp').innerText = data.cpu_temp;
-                        document.getElementById('cpu_temp_row').classList.remove('hidden');
-                    } else {
-                        document.getElementById('cpu_temp_row').classList.add('hidden');
+                        document.getElementById('cpu_temp').classList.remove('hidden');
                     }
                     
                     // Update RAM
                     document.getElementById('ram_percent').innerText = data.ram_percent;
-                    document.getElementById('ram_meter').style.height = data.ram_raw_percent + '%';
                     document.getElementById('ram_used_total').innerText = data.ram_used + ' / ' + data.ram_total;
                     
                     // Update GPU
                     if (data.gpu) {
                         document.getElementById('gpu_usage').innerText = data.gpu.usage;
-                        document.getElementById('gpu_meter').style.height = data.gpu.raw_percent + '%';
                         document.getElementById('gpu_vram').innerText = data.gpu.vram_used + ' / ' + data.gpu.vram_total;
                         document.getElementById('gpu_temp').innerText = data.gpu.temp;
                         document.getElementById('gpu_card').classList.remove('hidden');
-                    } else {
-                        document.getElementById('gpu_card').classList.add('hidden');
                     }
                 }
             };
+            xhr.send();
+        }
+
+        function sendMediaCmd(cmd) {
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', '/media_cmd?cmd=' + cmd, true);
+            xhr.send();
+        }
+
+        function setVolume(val) {
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', '/set_vol?level=' + val, true);
             xhr.send();
         }
 
@@ -394,14 +460,31 @@ def index():
 def data():
     return jsonify({
         "cpu_overall": f"{latest_data['cpu_percent']:.1f}%",
-        "cpu_raw_percent": latest_data['cpu_percent'],
         "cpu_temp": latest_data["cpu_temp"],
         "ram_percent": f"{latest_data['ram_percent']:.1f}%",
-        "ram_raw_percent": latest_data['ram_percent'],
         "ram_used": f"{latest_data['ram_used']:.1f}GB",
         "ram_total": f"{latest_data['ram_total']:.1f}GB",
         "gpu": latest_data["gpu_data"]
     })
+
+@app.route('/media_cmd', methods=['POST'])
+def media_cmd():
+    cmd = request.args.get('cmd')
+    if platform.system() == "Windows":
+        import ctypes
+        # VK_MEDIA_NEXT_TRACK = 0xB0, VK_MEDIA_PREV_TRACK = 0xB1, VK_MEDIA_PLAY_PAUSE = 0xB3
+        keys = {'next': 0xB0, 'prev': 0xB1, 'playpause': 0xB3}
+        if cmd in keys:
+            vk = keys[cmd]
+            ctypes.windll.user32.keybd_event(vk, 0, 0, 0) # Key Down
+            ctypes.windll.user32.keybd_event(vk, 0, 2, 0) # Key Up
+    return jsonify({"status": "ok"})
+
+@app.route('/set_vol', methods=['POST'])
+def set_vol():
+    level = request.args.get('level', type=int)
+    print(f"Set volume requested: {level}%")
+    return jsonify({"status": "ok"})
 
 if __name__ == '__main__':
     t = threading.Thread(target=bg_monitor, daemon=True)
