@@ -2,7 +2,6 @@ import os
 import time
 import platform
 import threading
-from collections import deque
 from flask import Flask, render_template_string, jsonify
 import psutil
 
@@ -16,7 +15,6 @@ except ImportError:
 
 latest_data = {
     "cpu_percent": 0.0,
-    "cpu_per_core": [],
     "cpu_temp": None,
     "ram_percent": 0.0,
     "ram_used": 0.0,
@@ -58,20 +56,17 @@ def get_gpu_data():
 
 def bg_monitor():
     psutil.cpu_percent(interval=None)
-    psutil.cpu_percent(interval=None, percpu=True)
     time.sleep(1)
     
     while True:
         try:
             cpu_p = psutil.cpu_percent(interval=None)
-            cpu_cores = psutil.cpu_percent(interval=None, percpu=True)
             cpu_t = get_cpu_temp()
             
             ram = psutil.virtual_memory()
             gpu = get_gpu_data()
             
             latest_data["cpu_percent"] = cpu_p
-            latest_data["cpu_per_core"] = cpu_cores
             latest_data["cpu_temp"] = cpu_t
             
             latest_data["ram_percent"] = ram.percent
@@ -81,7 +76,8 @@ def bg_monitor():
         except Exception as e:
             print("Error in background monitor:", e)
         
-        time.sleep(3)
+        # Increased refresh frequency to 1 second
+        time.sleep(1)
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -142,19 +138,6 @@ HTML_TEMPLATE = """
     .val {
         font-weight: bold;
     }
-    .cores-grid {
-        display: flex;
-        flex-wrap: wrap;
-        font-size: 18px;
-        margin-top: 15px;
-        border-top: 2px dashed #ffffff;
-        padding-top: 10px;
-    }
-    .core {
-        width: 50%; 
-        box-sizing: border-box;
-        margin-bottom: 4px;
-    }
     .hidden {
         display: none !important;
     }
@@ -167,7 +150,6 @@ HTML_TEMPLATE = """
             <div class="card-title">CPU</div>
             <div class="row"><span>LOAD</span> <span class="val" id="cpu_overall">--%</span></div>
             <div class="row hidden" id="cpu_temp_row"><span>TEMP</span> <span class="val" id="cpu_temp">--°C</span></div>
-            <div class="cores-grid" id="cpu_cores_container"></div>
         </div>
         <div class="meter-container">
             <div class="meter-fill" id="cpu_meter" style="height: 0%;"></div>
@@ -216,13 +198,6 @@ HTML_TEMPLATE = """
                         document.getElementById('cpu_temp_row').classList.add('hidden');
                     }
                     
-                    var coresHtml = '';
-                    for (var i=0; i<data.cpu_cores.length; i++) {
-                        var c = i.toString().padStart(2, '0');
-                        coresHtml += '<div class="core">C' + c + ':' + data.cpu_cores[i] + '</div>';
-                    }
-                    document.getElementById('cpu_cores_container').innerHTML = coresHtml;
-                    
                     // Update RAM
                     document.getElementById('ram_percent').innerText = data.ram_percent;
                     document.getElementById('ram_meter').style.height = data.ram_raw_percent + '%';
@@ -244,7 +219,8 @@ HTML_TEMPLATE = """
         }
 
         updateData();
-        setInterval(updateData, 3000);
+        // Increased refresh frequency to 1 second
+        setInterval(updateData, 1000);
     </script>
 </body>
 </html>
@@ -256,13 +232,10 @@ def index():
 
 @app.route('/data')
 def data():
-    cpu_cores_formatted = [f"{c:5.1f}%" for c in latest_data["cpu_per_core"]]
-    
     return jsonify({
         "cpu_overall": f"{latest_data['cpu_percent']:.1f}%",
         "cpu_raw_percent": latest_data['cpu_percent'],
         "cpu_temp": latest_data["cpu_temp"],
-        "cpu_cores": cpu_cores_formatted,
         "ram_percent": f"{latest_data['ram_percent']:.1f}%",
         "ram_raw_percent": latest_data['ram_percent'],
         "ram_used": f"{latest_data['ram_used']:.1f}GB",
