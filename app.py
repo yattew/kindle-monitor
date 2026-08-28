@@ -22,8 +22,8 @@ latest_data = {
     "ram_used": 0.0,
     "ram_total": 0.0,
     "gpu_data": None,
-    "cpu_history": deque(maxlen=40),
-    "ram_history": deque(maxlen=40)
+    "cpu_history": deque(maxlen=18),
+    "ram_history": deque(maxlen=18)
 }
 
 def get_cpu_temp():
