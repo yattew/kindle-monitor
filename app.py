@@ -21,9 +21,7 @@ latest_data = {
     "ram_percent": 0.0,
     "ram_used": 0.0,
     "ram_total": 0.0,
-    "gpu_data": None,
-    "cpu_history": deque(maxlen=18),
-    "ram_history": deque(maxlen=18)
+    "gpu_data": None
 }
 
 def get_cpu_temp():
@@ -57,27 +55,14 @@ def get_gpu_data():
     except Exception:
         return None
 
-def generate_sparkline(data_points):
-    if not data_points:
-        return ""
-    bars = " ▂▃▄▅▆▇█"
-    line = ""
-    for val in data_points:
-        if val is None:
-            line += " "
-            continue
-        idx = int((val / 100.0) * (len(bars) - 1))
-        idx = max(0, min(len(bars) - 1, idx))
-        line += bars[idx]
-    return line
-
 def generate_progress_bar(percent, length=20):
     if not isinstance(percent, (int, float)):
-        return f"[{'░'*length}]"
+        return f"[{' '*length}]"
     filled_length = int(length * percent // 100)
     filled_length = max(0, min(length, filled_length))
     empty_length = length - filled_length
-    return f"[{'█'*filled_length}{'░'*empty_length}]"
+    # Using a distinct vertical bar 
+    return f"[{'❚'*filled_length}{' '*empty_length}]"
 
 def bg_monitor():
     psutil.cpu_percent(interval=None)
@@ -101,9 +86,6 @@ def bg_monitor():
             latest_data["ram_used"] = ram.used / (1024 ** 3)
             latest_data["ram_total"] = ram.total / (1024 ** 3)
             latest_data["gpu_data"] = gpu
-            
-            latest_data["cpu_history"].append(cpu_p)
-            latest_data["ram_history"].append(ram.percent)
         except Exception as e:
             print("Error in background monitor:", e)
         
@@ -122,55 +104,50 @@ HTML_TEMPLATE = """
         color: #ffffff; 
         font-family: monospace; 
         margin: 0;
-        padding: 10px;
-        font-size: 18px;
-        line-height: 1.2;
+        padding: 12px;
+        font-size: 24px; /* Increased font size */
+        line-height: 1.3;
     }
     .card {
         border: 2px solid #ffffff;
-        margin-bottom: 15px;
-        padding: 10px;
+        margin-bottom: 20px;
+        padding: 12px;
         box-sizing: border-box;
     }
     .card-title {
         font-weight: bold;
-        font-size: 20px;
-        margin-bottom: 8px;
-        border-bottom: 1px dashed #ffffff;
-        padding-bottom: 4px;
+        font-size: 26px; /* Increased font size */
+        margin-bottom: 12px;
+        border-bottom: 2px dashed #ffffff;
+        padding-bottom: 6px;
         text-transform: uppercase;
     }
     .row {
         display: flex;
         justify-content: space-between;
-        margin-bottom: 4px;
+        margin-bottom: 8px;
     }
     .val {
         font-weight: bold;
     }
     .bar {
-        font-size: 16px;
-        letter-spacing: -1px;
-    }
-    .sparkline {
-        font-size: 28px;
-        letter-spacing: 0px;
-        text-align: left;
-        line-height: 1;
+        font-size: 22px;
+        letter-spacing: 2px; /* Spaced out slightly to show individual vertical bars */
         margin: 10px 0;
-        white-space: pre;
+        font-weight: bold;
     }
     .cores-grid {
         display: flex;
         flex-wrap: wrap;
-        font-size: 14px;
-        margin-top: 10px;
-        border-top: 1px dashed #ffffff;
-        padding-top: 8px;
+        font-size: 18px;
+        margin-top: 15px;
+        border-top: 2px dashed #ffffff;
+        padding-top: 10px;
     }
     .core {
         width: 50%; 
         box-sizing: border-box;
+        margin-bottom: 4px;
     }
     .hidden {
         display: none !important;
@@ -184,7 +161,6 @@ HTML_TEMPLATE = """
         <div class="row"><span>LOAD</span> <span class="val" id="cpu_overall">--%</span></div>
         <div class="row bar" id="cpu_bar">[                    ]</div>
         <div class="row hidden" id="cpu_temp_row"><span>TEMP</span> <span class="val" id="cpu_temp">--°C</span></div>
-        <div class="sparkline" id="cpu_spark"></div>
         <div class="cores-grid" id="cpu_cores_container"></div>
     </div>
     
@@ -193,7 +169,6 @@ HTML_TEMPLATE = """
         <div class="row"><span>LOAD</span> <span class="val" id="ram_percent">--%</span></div>
         <div class="row bar" id="ram_bar">[                    ]</div>
         <div class="row"><span>USED</span> <span class="val" id="ram_used_total">-- / --GB</span></div>
-        <div class="sparkline" id="ram_spark"></div>
     </div>
     
     <div class="card hidden" id="gpu_card">
@@ -214,7 +189,6 @@ HTML_TEMPLATE = """
                     // Update CPU
                     document.getElementById('cpu_overall').innerText = data.cpu_overall;
                     document.getElementById('cpu_bar').innerText = data.cpu_bar;
-                    document.getElementById('cpu_spark').innerText = data.cpu_spark;
                     
                     if (data.cpu_temp) {
                         document.getElementById('cpu_temp').innerText = data.cpu_temp;
@@ -234,7 +208,6 @@ HTML_TEMPLATE = """
                     document.getElementById('ram_percent').innerText = data.ram_percent;
                     document.getElementById('ram_bar').innerText = data.ram_bar;
                     document.getElementById('ram_used_total').innerText = data.ram_used + ' / ' + data.ram_total;
-                    document.getElementById('ram_spark').innerText = data.ram_spark;
                     
                     // Update GPU
                     if (data.gpu) {
@@ -270,12 +243,10 @@ def data():
         "cpu_bar": generate_progress_bar(latest_data['cpu_percent'], 20),
         "cpu_temp": latest_data["cpu_temp"],
         "cpu_cores": cpu_cores_formatted,
-        "cpu_spark": generate_sparkline(latest_data["cpu_history"]),
         "ram_percent": f"{latest_data['ram_percent']:.1f}%",
         "ram_bar": generate_progress_bar(latest_data['ram_percent'], 20),
         "ram_used": f"{latest_data['ram_used']:.1f}GB",
         "ram_total": f"{latest_data['ram_total']:.1f}GB",
-        "ram_spark": generate_sparkline(latest_data["ram_history"]),
         "gpu": latest_data["gpu_data"]
     })
 
