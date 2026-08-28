@@ -34,13 +34,46 @@ latest_data = {
 def get_cpu_temp():
     try:
         if platform.system() == "Windows":
+            # 1. Try LibreHardwareMonitor Web Server (Port 8085)
+            try:
+                import urllib.request
+                import json
+                req = urllib.request.Request("http://localhost:8085/data.json")
+                with urllib.request.urlopen(req, timeout=1) as response:
+                    data = json.loads(response.read().decode())
+                    
+                    def find_cpu_temp(node):
+                        if str(node.get("Type")) == "Temperature":
+                            name = str(node.get("Text") or node.get("Name") or "").lower()
+                            if "cpu" in name or "tctl" in name or "tdie" in name or "core" in name or "package" in name:
+                                val_str = str(node.get("Value", "")).split()[0].replace(',', '.')
+                                if val_str.replace('.', '', 1).isdigit():
+                                    return float(val_str)
+                        
+                        best = None
+                        for child in node.get("Children", []):
+                            res = find_cpu_temp(child)
+                            if res is not None:
+                                child_name = str(child.get("Text") or child.get("Name") or "").lower()
+                                if "package" in child_name or "tctl" in child_name:
+                                    return res
+                                if best is None:
+                                    best = res
+                        return best
+
+                    val = find_cpu_temp(data)
+                    if val is not None:
+                        return f"{val:.1f}°C"
+            except Exception:
+                pass
+
             import subprocess
             import json
             creation_flags = 0
             if hasattr(subprocess, 'CREATE_NO_WINDOW'):
                 creation_flags = subprocess.CREATE_NO_WINDOW
                 
-            # Check both LibreHardwareMonitor and OpenHardwareMonitor via JSON
+            # 2. Check LibreHardwareMonitor/OpenHardwareMonitor WMI via JSON
             ohm_queries = [
                 "Get-WmiObject -Namespace root\\LibreHardwareMonitor -Class Sensor | Where-Object { $_.SensorType -eq 'Temperature' } | Select-Object Identifier, Name, Value | ConvertTo-Json",
                 "Get-WmiObject -Namespace root\\OpenHardwareMonitor -Class Sensor | Where-Object { $_.SensorType -eq 'Temperature' } | Select-Object Identifier, Name, Value | ConvertTo-Json"
@@ -65,7 +98,6 @@ def get_cpu_temp():
                                 continue
                                 
                             if "cpu" in ident or "cpu" in name or "tctl" in name or "tdie" in name or "core" in name or "package" in name:
-                                # AMD Ryzen usually uses Tctl/Tdie or Package for the main die temp
                                 if "package" in name or "tctl" in name:
                                     return f"{float(val):.1f}°C"
                                 if best_temp is None:
@@ -76,7 +108,7 @@ def get_cpu_temp():
                 except Exception:
                     continue
                 
-            # Final fallback to standard ACPI WMI if LHM/OHM aren't running
+            # 3. Final fallback to standard ACPI WMI
             queries = [
                 "Get-CimInstance -Namespace root/wmi -ClassName MSAcpi_ThermalZoneTemperature | Select-Object -ExpandProperty CurrentTemperature",
                 "Get-WmiObject Win32_PerfFormattedData_Counters_ThermalZoneInformation | Select-Object -ExpandProperty HighPrecisionTemperature"
