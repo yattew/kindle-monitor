@@ -5,6 +5,12 @@ import threading
 from flask import Flask, render_template_string, jsonify
 import psutil
 
+# --- CONFIGURATION CONSTANTS ---
+REFRESH_RATE_SECONDS = 0.3
+FONT_SIZE_BODY = "38px"
+FONT_SIZE_TITLE = "46px"
+# -------------------------------
+
 app = Flask(__name__)
 
 try:
@@ -29,6 +35,17 @@ def get_cpu_temp():
             creation_flags = 0
             if hasattr(subprocess, 'CREATE_NO_WINDOW'):
                 creation_flags = subprocess.CREATE_NO_WINDOW
+                
+            # Try OpenHardwareMonitor first, then fallbacks
+            ohm_query = "Get-WmiObject -Namespace root\\OpenHardwareMonitor -Class Sensor | Where-Object { $_.SensorType -eq 'Temperature' -and $_.Name -match 'CPU' } | Select-Object -First 1 -ExpandProperty Value"
+            
+            try:
+                cmd = ["powershell", "-NoProfile", "-Command", ohm_query]
+                output = subprocess.check_output(cmd, text=True, timeout=2, creationflags=creation_flags).strip()
+                if output and output.replace('.', '', 1).isdigit():
+                    return f"{float(output):.1f}°C"
+            except Exception:
+                pass
                 
             queries = [
                 "Get-CimInstance -Namespace root/wmi -ClassName MSAcpi_ThermalZoneTemperature | Select-Object -ExpandProperty CurrentTemperature",
@@ -103,8 +120,7 @@ def bg_monitor():
         except Exception as e:
             print("Error in background monitor:", e)
         
-        # 0.3 second update interval
-        time.sleep(0.3)
+        time.sleep(REFRESH_RATE_SECONDS)
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -136,7 +152,7 @@ HTML_TEMPLATE = """
         flex-direction: column;
         
         overflow: hidden;
-        font-size: 38px; /* Massively increased font size */
+        font-size: {{ FONT_SIZE_BODY }};
         line-height: 1.3;
     }
     .card {
@@ -194,7 +210,7 @@ HTML_TEMPLATE = """
     }
     .card-title {
         font-weight: bold;
-        font-size: 46px; /* Massively increased text */
+        font-size: {{ FONT_SIZE_TITLE }};
         margin-bottom: 15px;
         border-bottom: 2px dashed #ffffff;
         padding-bottom: 8px;
@@ -245,7 +261,7 @@ HTML_TEMPLATE = """
         <div class="card-content">
             <div class="card-title">GPU</div>
             <div class="row"><span>LOAD</span> <span class="val" id="gpu_usage">--%</span></div>
-            <div class="row"><span>VRAM</span> <span class="val" id="gpu_vram">--MB / --MB</span></div>
+            <div class="row"><span>VRAM</span> <span class="val" id="gpu_vram">--GB / --GB</span></div>
             <div class="row"><span>TEMP</span> <span class="val" id="gpu_temp">--°C</span></div>
         </div>
         <div class="meter-container">
@@ -293,8 +309,7 @@ HTML_TEMPLATE = """
         }
 
         updateData();
-        // 0.3s refresh
-        setInterval(updateData, 300);
+        setInterval(updateData, {{ REFRESH_RATE_MS }});
     </script>
 </body>
 </html>
@@ -302,7 +317,12 @@ HTML_TEMPLATE = """
 
 @app.route('/')
 def index():
-    return render_template_string(HTML_TEMPLATE)
+    return render_template_string(
+        HTML_TEMPLATE, 
+        FONT_SIZE_BODY=FONT_SIZE_BODY,
+        FONT_SIZE_TITLE=FONT_SIZE_TITLE,
+        REFRESH_RATE_MS=int(REFRESH_RATE_SECONDS * 1000)
+    )
 
 @app.route('/data')
 def data():
