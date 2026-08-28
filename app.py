@@ -192,19 +192,19 @@ HTML_TEMPLATE = """
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Kindle Monitor</title>
 <style>
+    /* Reset & Base */
     html, body {
         height: 100%;
         margin: 0;
         padding: 0;
-    }
-    body {
         background-color: #000000; 
         color: #ffffff; 
         font-family: {{ FONT_FAMILY }}; 
         font-weight: {{ FONT_WEIGHT_BODY }};
-        padding: 12px;
-        box-sizing: border-box;
-        
+        overflow: hidden;
+        line-height: 1.2;
+    }
+    .main-container {
         display: -webkit-box;
         display: -webkit-flex;
         display: flex;
@@ -212,126 +212,172 @@ HTML_TEMPLATE = """
         -webkit-box-direction: normal;
         -webkit-flex-direction: column;
         flex-direction: column;
-        
-        overflow: hidden;
-        line-height: 1.2;
+        height: 100%;
+        padding: 15px;
+        box-sizing: border-box;
     }
-    
-    /* --- TOP SECTION: MONITORS --- */
-    .monitor-container {
+
+    /* --- TOP SECTION (3 Monitors) --- */
+    .top-section {
+        display: -webkit-box;
+        display: -webkit-flex;
+        display: flex;
+        -webkit-box-flex: 1;
+        -webkit-flex: 1;
+        flex: 1;
+        margin-bottom: 20px;
+    }
+    .card {
+        border: 4px solid #ffffff;
+        border-radius: 25px;
         display: -webkit-box;
         display: -webkit-flex;
         display: flex;
         -webkit-box-orient: vertical;
         -webkit-flex-direction: column;
         flex-direction: column;
-        margin-bottom: 20px;
-        border-bottom: 2px dashed #555;
-        padding-bottom: 15px;
+        -webkit-box-flex: 1;
+        -webkit-flex: 1;
+        flex: 1;
+        margin-right: 15px;
+        padding: 15px;
+        -webkit-box-align: center;
+        -webkit-align-items: center;
+        align-items: center;
+        -webkit-box-pack: start;
+        -webkit-justify-content: flex-start;
+        justify-content: flex-start;
     }
-    .tiny-card {
-        display: -webkit-box;
-        display: -webkit-flex;
-        display: flex;
-        -webkit-box-pack: justify;
-        -webkit-justify-content: space-between;
-        justify-content: space-between;
-        font-size: 24px;
-        margin-bottom: 8px;
+    .card:last-child {
+        margin-right: 0;
     }
-    .tiny-title {
+    .card-title {
         font-weight: {{ FONT_WEIGHT_TITLE }};
-        color: #aaa;
-        width: 60px;
+        font-size: {{ FONT_SIZE_TITLE }};
+        margin-bottom: 25px;
+        text-align: center;
+        width: 100%;
     }
-    .tiny-val {
-        font-weight: bold;
+    .card-val {
+        font-size: {{ FONT_SIZE_BODY }};
+        margin-bottom: 15px;
+        text-align: center;
     }
     .hidden {
         display: none !important;
     }
-    
-    /* --- BOTTOM SECTION: MEDIA --- */
-    .media-container {
-        -webkit-box-flex: 1;
-        -webkit-flex: 1;
-        flex: 1;
-        
+
+    /* --- MIDDLE SECTION (Media Player) --- */
+    .middle-section {
         display: -webkit-box;
         display: -webkit-flex;
         display: flex;
-        -webkit-box-orient: vertical;
-        -webkit-flex-direction: column;
-        flex-direction: column;
-        
+        height: 32%; /* Take up roughly a third of the screen */
+        margin-bottom: 20px;
+    }
+    .album-art {
+        border: 4px solid #ffffff;
+        border-radius: 25px;
+        width: 40%; /* Fixed width relative to parent */
+        margin-right: 15px;
+        display: -webkit-box;
+        display: -webkit-flex;
+        display: flex;
         -webkit-box-align: center;
         -webkit-align-items: center;
         align-items: center;
-        -webkit-box-pack: end;
-        -webkit-justify-content: flex-end;
-        justify-content: flex-end;
-    }
-    .album-art {
-        width: 300px;
-        height: 300px;
-        border: 2px solid #555;
-        margin-bottom: 15px;
-        background-color: #111;
-        display: flex;
-        align-items: center;
+        -webkit-box-pack: center;
+        -webkit-justify-content: center;
         justify-content: center;
-        color: #555;
-        font-size: 20px;
+        overflow: hidden;
     }
     .album-art img {
         width: 100%;
         height: 100%;
         object-fit: cover;
     }
-    .media-title {
-        font-size: 28px;
-        font-weight: bold;
-        text-align: center;
-        margin-bottom: 25px;
-        width: 100%;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    .media-controls {
+    .media-info {
         display: -webkit-box;
         display: -webkit-flex;
         display: flex;
+        -webkit-box-orient: vertical;
+        -webkit-flex-direction: column;
+        flex-direction: column;
+        -webkit-box-flex: 1;
+        -webkit-flex: 1;
+        flex: 1;
+    }
+    .media-title {
+        border: 4px solid #ffffff;
+        border-radius: 25px;
+        display: -webkit-box;
+        display: -webkit-flex;
+        display: flex;
+        -webkit-box-align: center;
+        -webkit-align-items: center;
+        align-items: center;
         -webkit-box-pack: center;
         -webkit-justify-content: center;
         justify-content: center;
-        width: 100%;
-        margin-bottom: 30px;
+        font-size: {{ FONT_SIZE_TITLE }};
+        font-weight: {{ FONT_WEIGHT_TITLE }};
+        margin-bottom: 15px;
+        padding: 10px;
+        text-align: center;
+        -webkit-box-flex: 1;
+        -webkit-flex: 1;
+        flex: 1; /* take remaining height */
+    }
+    .media-buttons {
+        display: -webkit-box;
+        display: -webkit-flex;
+        display: flex;
+        height: 45%;
     }
     .media-btn {
+        border: 4px solid #ffffff;
+        border-radius: 15px;
         background: transparent;
-        color: #fff;
-        border: 2px solid #fff;
-        font-size: 32px;
-        padding: 15px 35px;
-        margin: 0 10px;
+        color: #ffffff;
+        font-size: 45px;
+        display: -webkit-box;
+        display: -webkit-flex;
+        display: flex;
+        -webkit-box-align: center;
+        -webkit-align-items: center;
+        align-items: center;
+        -webkit-box-pack: center;
+        -webkit-justify-content: center;
+        justify-content: center;
+        -webkit-box-flex: 1;
+        -webkit-flex: 1;
+        flex: 1;
+        margin-right: 15px;
         cursor: pointer;
     }
     .media-btn:active {
-        background: #fff;
-        color: #000;
+        background: #ffffff;
+        color: #000000;
     }
-    
-    /* --- VOLUME SLIDER --- */
-    .slider-container {
-        width: 100%;
+    .media-btn:last-child {
+        margin-right: 0;
+    }
+
+    /* --- BOTTOM SECTION (Volume Slider) --- */
+    .bottom-section {
+        border: 4px solid #ffffff;
+        border-radius: 15px;
+        padding: 0 20px;
+        display: -webkit-box;
+        display: -webkit-flex;
         display: flex;
+        -webkit-box-align: center;
+        -webkit-align-items: center;
         align-items: center;
-        margin-bottom: 10px;
-    }
-    .vol-icon {
-        font-size: 24px;
-        margin-right: 15px;
+        -webkit-box-pack: center;
+        -webkit-justify-content: center;
+        justify-content: center;
+        height: 80px; /* Fixed tall height for bottom slider container */
     }
     .vol-slider {
         -webkit-appearance: none;
@@ -343,55 +389,62 @@ HTML_TEMPLATE = """
     }
     .vol-slider::-webkit-slider-thumb {
         -webkit-appearance: none;
-        width: 30px;
-        height: 30px;
-        background: #fff;
-        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        background: #ffffff;
+        border-radius: 10px;
         cursor: pointer;
     }
 </style>
 </head>
 <body id="body">
-    
-    <!-- TOP SECTION: HARDWARE MONITORS -->
-    <div class="monitor-container">
-        <div class="tiny-card" id="cpu_card">
-            <span class="tiny-title">CPU</span>
-            <span class="tiny-val" id="cpu_overall">--%</span>
-            <span class="tiny-val hidden" id="cpu_temp">--°C</span>
-        </div>
-        <div class="tiny-card" id="ram_card">
-            <span class="tiny-title">RAM</span>
-            <span class="tiny-val" id="ram_percent">--%</span>
-            <span class="tiny-val" id="ram_used_total">--GB</span>
-        </div>
-        <div class="tiny-card hidden" id="gpu_card">
-            <span class="tiny-title">GPU</span>
-            <span class="tiny-val" id="gpu_usage">--%</span>
-            <span class="tiny-val" id="gpu_vram">--GB</span>
-            <span class="tiny-val" id="gpu_temp">--°C</span>
-        </div>
-    </div>
-    
-    <!-- BOTTOM SECTION: MEDIA CONTROLS -->
-    <div class="media-container">
-        <div class="album-art">
-            <img id="album_img" src="" alt="No Art" style="display: none;">
-            <span id="album_placeholder">No Media</span>
+    <div class="main-container">
+        
+        <!-- TOP SECTION: 3 Columns -->
+        <div class="top-section">
+            <div class="card" id="cpu_card">
+                <div class="card-title">CPU</div>
+                <div class="card-val" id="cpu_overall">--%</div>
+                <div class="card-val hidden" id="cpu_temp">--°C</div>
+            </div>
+            
+            <div class="card" id="gpu_card">
+                <div class="card-title">GPU</div>
+                <div class="card-val" id="gpu_usage">--%</div>
+                <div class="card-val" id="gpu_temp">--°C</div>
+                <div class="card-val" id="gpu_vram">--GB</div>
+            </div>
+            
+            <div class="card" id="ram_card">
+                <div class="card-title">RAM</div>
+                <div class="card-val" id="ram_percent">--%</div>
+                <div class="card-val" id="ram_used_total">--GB</div>
+            </div>
         </div>
         
-        <div class="media-title" id="media_title">Awaiting Media...</div>
-        
-        <div class="media-controls">
-            <button class="media-btn" onclick="sendMediaCmd('prev')">⏮</button>
-            <button class="media-btn" onclick="sendMediaCmd('playpause')">⏯</button>
-            <button class="media-btn" onclick="sendMediaCmd('next')">⏭</button>
+        <!-- MIDDLE SECTION: Media -->
+        <div class="middle-section">
+            <div class="album-art">
+                <img id="album_img" src="" alt="Art" style="display: none;">
+                <span id="album_placeholder" style="font-size: 32px; font-weight: bold; color: #555;">Art</span>
+            </div>
+            
+            <div class="media-info">
+                <div class="media-title" id="media_title">Music Title</div>
+                
+                <div class="media-buttons">
+                    <button class="media-btn" onclick="sendMediaCmd('prev')">⏮</button>
+                    <button class="media-btn" onclick="sendMediaCmd('playpause')">⏯</button>
+                    <button class="media-btn" onclick="sendMediaCmd('next')">⏭</button>
+                </div>
+            </div>
         </div>
         
-        <div class="slider-container">
-            <span class="vol-icon">🔉</span>
+        <!-- BOTTOM SECTION: Volume -->
+        <div class="bottom-section">
             <input type="range" min="0" max="100" value="50" class="vol-slider" id="vol_slider" onchange="setVolume(this.value)">
         </div>
+        
     </div>
 
     <script>
