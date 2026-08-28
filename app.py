@@ -24,6 +24,30 @@ latest_data = {
 
 def get_cpu_temp():
     try:
+        if platform.system() == "Windows":
+            import subprocess
+            # Use PowerShell to query WMI for thermal zones (Requires Admin privileges)
+            cmd = [
+                "powershell", "-NoProfile", "-Command", 
+                "Get-CimInstance -Namespace root/wmi -ClassName MSAcpi_ThermalZoneTemperature | Select-Object -ExpandProperty CurrentTemperature"
+            ]
+            
+            # Hide the cmd window popup if running from a GUI context
+            creation_flags = 0
+            if hasattr(subprocess, 'CREATE_NO_WINDOW'):
+                creation_flags = subprocess.CREATE_NO_WINDOW
+                
+            output = subprocess.check_output(cmd, text=True, timeout=2, creationflags=creation_flags).strip()
+            if output:
+                for line in output.split('\\n'):
+                    val = line.strip()
+                    if val.isdigit():
+                        celsius = (int(val) / 10.0) - 273.15
+                        if 0 < celsius < 150:
+                            return f"{celsius:.1f}°C"
+            return None
+            
+        # Linux/macOS fallback
         temps = psutil.sensors_temperatures()
         if not temps:
             return None
