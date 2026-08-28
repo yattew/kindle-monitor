@@ -28,7 +28,9 @@ latest_data = {
     "ram_percent": 0.0,
     "ram_used": 0.0,
     "ram_total": 0.0,
-    "gpu_data": None
+    "gpu_data": None,
+    "media": None,
+    "volume": 50
 }
 
 def get_cpu_temp():
@@ -442,12 +444,14 @@ HTML_TEMPLATE = """
         
         <!-- BOTTOM SECTION: Volume -->
         <div class="bottom-section">
-            <input type="range" min="0" max="100" value="50" class="vol-slider" id="vol_slider" onchange="setVolume(this.value)">
+            <input type="range" min="0" max="100" value="50" class="vol-slider" id="vol_slider" oninput="isDragging=true;" onchange="setVolume(this.value)">
         </div>
         
     </div>
 
     <script>
+        var isDragging = false;
+
         function updateData() {
             var xhr = new XMLHttpRequest();
             xhr.open('GET', '/data', true);
@@ -464,14 +468,35 @@ HTML_TEMPLATE = """
                     
                     // Update RAM
                     document.getElementById('ram_percent').innerText = data.ram_percent;
-                    document.getElementById('ram_used_total').innerText = data.ram_used + ' / ' + data.ram_total;
+                    document.getElementById('ram_used_total').innerText = data.ram_used;
                     
                     // Update GPU
                     if (data.gpu) {
                         document.getElementById('gpu_usage').innerText = data.gpu.usage;
-                        document.getElementById('gpu_vram').innerText = data.gpu.vram_used + ' / ' + data.gpu.vram_total;
+                        document.getElementById('gpu_vram').innerText = data.gpu.vram_used;
                         document.getElementById('gpu_temp').innerText = data.gpu.temp;
-                        document.getElementById('gpu_card').classList.remove('hidden');
+                    }
+                    
+                    // Update Media
+                    if (data.media) {
+                        document.getElementById('media_title').innerText = data.media.title;
+                        if (data.media.art) {
+                            document.getElementById('album_img').src = data.media.art;
+                            document.getElementById('album_img').style.display = 'block';
+                            document.getElementById('album_placeholder').style.display = 'none';
+                        } else {
+                            document.getElementById('album_img').style.display = 'none';
+                            document.getElementById('album_placeholder').style.display = 'block';
+                        }
+                    } else {
+                        document.getElementById('media_title').innerText = "No Media";
+                        document.getElementById('album_img').style.display = 'none';
+                        document.getElementById('album_placeholder').style.display = 'block';
+                    }
+                    
+                    // Update Volume Slider (only if user is not currently dragging it)
+                    if (!isDragging) {
+                        document.getElementById('vol_slider').value = data.volume;
                     }
                 }
             };
@@ -487,6 +512,9 @@ HTML_TEMPLATE = """
         function setVolume(val) {
             var xhr = new XMLHttpRequest();
             xhr.open('POST', '/set_vol?level=' + val, true);
+            xhr.onload = function() {
+                isDragging = false; // Reset dragging state when server acknowledges volume change
+            }
             xhr.send();
         }
 
@@ -517,7 +545,9 @@ def data():
         "ram_percent": f"{latest_data['ram_percent']:.1f}%",
         "ram_used": f"{latest_data['ram_used']:.1f}GB",
         "ram_total": f"{latest_data['ram_total']:.1f}GB",
-        "gpu": latest_data["gpu_data"]
+        "gpu": latest_data["gpu_data"],
+        "media": latest_data["media"],
+        "volume": latest_data["volume"]
     })
 
 @app.route('/media_cmd', methods=['POST'])
@@ -537,7 +567,8 @@ def media_cmd():
 @app.route('/set_vol', methods=['POST'])
 def set_vol():
     level = request.args.get('level', type=int)
-    print(f"Set volume requested: {level}%")
+    if level is not None:
+        set_master_volume(level)
     return jsonify({"status": "ok"})
 
 if __name__ == '__main__':
