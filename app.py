@@ -2,7 +2,7 @@ import os
 import time
 import platform
 import threading
-from flask import Flask, render_template_string, jsonify, request
+from flask import Flask, render_template_string, jsonify
 import psutil
 
 # --- CONFIGURATION CONSTANTS ---
@@ -10,8 +10,8 @@ REFRESH_RATE_SECONDS = 0.3
 FONT_FAMILY = "monospace, sans-serif"
 FONT_WEIGHT_BODY = "600"   # 400 is normal, 600 is semi-bold, 700 is bold
 FONT_WEIGHT_TITLE = "900"  # 900 is ultra-bold
-FONT_SIZE_BODY = "22px"
-FONT_SIZE_TITLE = "28px"
+FONT_SIZE_BODY = "38px"
+FONT_SIZE_TITLE = "46px"
 # -------------------------------
 
 app = Flask(__name__)
@@ -28,9 +28,7 @@ latest_data = {
     "ram_percent": 0.0,
     "ram_used": 0.0,
     "ram_total": 0.0,
-    "gpu_data": None,
-    "media": None,
-    "volume": 50
+    "gpu_data": None
 }
 
 def get_cpu_temp():
@@ -194,19 +192,20 @@ HTML_TEMPLATE = """
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Kindle Monitor</title>
 <style>
-    /* Reset & Base */
     html, body {
         height: 100%;
         margin: 0;
         padding: 0;
+    }
+    body {
         background-color: #000000; 
         color: #ffffff; 
         font-family: {{ FONT_FAMILY }}; 
         font-weight: {{ FONT_WEIGHT_BODY }};
-        overflow: hidden;
-        line-height: 1.2;
-    }
-    .main-container {
+        padding: 12px;
+        box-sizing: border-box;
+        
+        /* Legacy WebKit Flexbox for older Kindles */
         display: -webkit-box;
         display: -webkit-flex;
         display: flex;
@@ -214,244 +213,126 @@ HTML_TEMPLATE = """
         -webkit-box-direction: normal;
         -webkit-flex-direction: column;
         flex-direction: column;
-        height: 100%;
+        
+        overflow: hidden;
+        font-size: {{ FONT_SIZE_BODY }};
+        line-height: 1.3;
+    }
+    .card {
+        border: 2px solid #ffffff;
+        margin-bottom: 12px;
         padding: 15px;
         box-sizing: border-box;
-    }
-
-    /* --- TOP SECTION (3 Monitors) --- */
-    .top-section {
+        
         display: -webkit-box;
         display: -webkit-flex;
         display: flex;
+        -webkit-box-pack: justify;
+        -webkit-justify-content: space-between;
+        justify-content: space-between;
+        
+        /* Flex grow to fill vertical space */
         -webkit-box-flex: 1;
         -webkit-flex: 1;
         flex: 1;
-        margin-bottom: 20px;
     }
-    .card {
-        border: 4px solid #ffffff;
-        border-radius: 25px;
+    .card:last-child {
+        margin-bottom: 0; /* Remove bottom margin for the last card to fit perfectly */
+    }
+    .card-content {
+        flex: 1;
+        padding-right: 15px;
+        
         display: -webkit-box;
         display: -webkit-flex;
         display: flex;
         -webkit-box-orient: vertical;
+        -webkit-box-direction: normal;
         -webkit-flex-direction: column;
         flex-direction: column;
-        -webkit-box-flex: 1;
-        -webkit-flex: 1;
-        flex: 1;
-        margin-right: 15px;
-        padding: 15px;
-        -webkit-box-align: center;
-        -webkit-align-items: center;
-        align-items: center;
-        -webkit-box-pack: start;
-        -webkit-justify-content: flex-start;
-        justify-content: flex-start;
+        
+        -webkit-box-pack: center;
+        -webkit-justify-content: center;
+        justify-content: center;
     }
-    .card:last-child {
-        margin-right: 0;
+    .meter-container {
+        width: 60px; /* Made even wider */
+        border: 2px solid #ffffff;
+        background-color: #000000;
+        
+        display: -webkit-box;
+        display: -webkit-flex;
+        display: flex;
+        -webkit-box-align: end;
+        -webkit-align-items: flex-end;
+        align-items: flex-end;
+    }
+    .meter-fill {
+        width: 100%;
+        background-color: #ffffff;
     }
     .card-title {
         font-weight: {{ FONT_WEIGHT_TITLE }};
         font-size: {{ FONT_SIZE_TITLE }};
-        margin-bottom: 25px;
-        text-align: center;
-        width: 100%;
-    }
-    .card-val {
-        font-size: {{ FONT_SIZE_BODY }};
         margin-bottom: 15px;
-        text-align: center;
+        border-bottom: 2px dashed #ffffff;
+        padding-bottom: 8px;
+        text-transform: uppercase;
+    }
+    .row {
+        display: -webkit-box;
+        display: -webkit-flex;
+        display: flex;
+        -webkit-box-pack: justify;
+        -webkit-justify-content: space-between;
+        justify-content: space-between;
+        margin-bottom: 10px;
+    }
+    .val {
+        font-weight: {{ FONT_WEIGHT_TITLE }};
     }
     .hidden {
         display: none !important;
     }
-
-    /* --- MIDDLE SECTION (Media Player) --- */
-    .middle-section {
-        display: -webkit-box;
-        display: -webkit-flex;
-        display: flex;
-        height: 32%; /* Take up roughly a third of the screen */
-        margin-bottom: 20px;
-    }
-    .album-art {
-        border: 4px solid #ffffff;
-        border-radius: 25px;
-        width: 40%; /* Fixed width relative to parent */
-        margin-right: 15px;
-        display: -webkit-box;
-        display: -webkit-flex;
-        display: flex;
-        -webkit-box-align: center;
-        -webkit-align-items: center;
-        align-items: center;
-        -webkit-box-pack: center;
-        -webkit-justify-content: center;
-        justify-content: center;
-        overflow: hidden;
-    }
-    .album-art img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
-    .media-info {
-        display: -webkit-box;
-        display: -webkit-flex;
-        display: flex;
-        -webkit-box-orient: vertical;
-        -webkit-flex-direction: column;
-        flex-direction: column;
-        -webkit-box-flex: 1;
-        -webkit-flex: 1;
-        flex: 1;
-    }
-    .media-title {
-        border: 4px solid #ffffff;
-        border-radius: 25px;
-        display: -webkit-box;
-        display: -webkit-flex;
-        display: flex;
-        -webkit-box-align: center;
-        -webkit-align-items: center;
-        align-items: center;
-        -webkit-box-pack: center;
-        -webkit-justify-content: center;
-        justify-content: center;
-        font-size: {{ FONT_SIZE_TITLE }};
-        font-weight: {{ FONT_WEIGHT_TITLE }};
-        margin-bottom: 15px;
-        padding: 10px;
-        text-align: center;
-        -webkit-box-flex: 1;
-        -webkit-flex: 1;
-        flex: 1; /* take remaining height */
-    }
-    .media-buttons {
-        display: -webkit-box;
-        display: -webkit-flex;
-        display: flex;
-        height: 45%;
-    }
-    .media-btn {
-        border: 4px solid #ffffff;
-        border-radius: 15px;
-        background: transparent;
-        color: #ffffff;
-        font-size: 45px;
-        display: -webkit-box;
-        display: -webkit-flex;
-        display: flex;
-        -webkit-box-align: center;
-        -webkit-align-items: center;
-        align-items: center;
-        -webkit-box-pack: center;
-        -webkit-justify-content: center;
-        justify-content: center;
-        -webkit-box-flex: 1;
-        -webkit-flex: 1;
-        flex: 1;
-        margin-right: 15px;
-        cursor: pointer;
-    }
-    .media-btn:active {
-        background: #ffffff;
-        color: #000000;
-    }
-    .media-btn:last-child {
-        margin-right: 0;
-    }
-
-    /* --- BOTTOM SECTION (Volume Slider) --- */
-    .bottom-section {
-        border: 4px solid #ffffff;
-        border-radius: 15px;
-        padding: 0 20px;
-        display: -webkit-box;
-        display: -webkit-flex;
-        display: flex;
-        -webkit-box-align: center;
-        -webkit-align-items: center;
-        align-items: center;
-        -webkit-box-pack: center;
-        -webkit-justify-content: center;
-        justify-content: center;
-        height: 80px; /* Fixed tall height for bottom slider container */
-    }
-    .vol-slider {
-        -webkit-appearance: none;
-        width: 100%;
-        height: 8px;
-        background: #555;
-        outline: none;
-        border-radius: 4px;
-    }
-    .vol-slider::-webkit-slider-thumb {
-        -webkit-appearance: none;
-        width: 50px;
-        height: 50px;
-        background: #ffffff;
-        border-radius: 10px;
-        cursor: pointer;
-    }
 </style>
 </head>
 <body id="body">
-    <div class="main-container">
-        
-        <!-- TOP SECTION: 3 Columns -->
-        <div class="top-section">
-            <div class="card" id="cpu_card">
-                <div class="card-title">CPU</div>
-                <div class="card-val" id="cpu_overall">--%</div>
-                <div class="card-val hidden" id="cpu_temp">--°C</div>
-            </div>
-            
-            <div class="card" id="gpu_card">
-                <div class="card-title">GPU</div>
-                <div class="card-val" id="gpu_usage">--%</div>
-                <div class="card-val" id="gpu_temp">--°C</div>
-                <div class="card-val" id="gpu_vram">--GB</div>
-            </div>
-            
-            <div class="card" id="ram_card">
-                <div class="card-title">RAM</div>
-                <div class="card-val" id="ram_percent">--%</div>
-                <div class="card-val" id="ram_used_total">--GB</div>
-            </div>
+    
+    <div class="card" id="cpu_card">
+        <div class="card-content">
+            <div class="card-title">CPU</div>
+            <div class="row"><span>LOAD</span> <span class="val" id="cpu_overall">--%</span></div>
+            <div class="row hidden" id="cpu_temp_row"><span>TEMP</span> <span class="val" id="cpu_temp">--°C</span></div>
         </div>
-        
-        <!-- MIDDLE SECTION: Media -->
-        <div class="middle-section">
-            <div class="album-art">
-                <img id="album_img" src="" alt="Art" style="display: none;">
-                <span id="album_placeholder" style="font-size: 32px; font-weight: bold; color: #555;">Art</span>
-            </div>
-            
-            <div class="media-info">
-                <div class="media-title" id="media_title">Music Title</div>
-                
-                <div class="media-buttons">
-                    <button class="media-btn" onclick="sendMediaCmd('prev')">⏮</button>
-                    <button class="media-btn" onclick="sendMediaCmd('playpause')">⏯</button>
-                    <button class="media-btn" onclick="sendMediaCmd('next')">⏭</button>
-                </div>
-            </div>
+        <div class="meter-container">
+            <div class="meter-fill" id="cpu_meter" style="height: 0%;"></div>
         </div>
-        
-        <!-- BOTTOM SECTION: Volume -->
-        <div class="bottom-section">
-            <input type="range" min="0" max="100" value="50" class="vol-slider" id="vol_slider" oninput="isDragging=true;" onchange="setVolume(this.value)">
+    </div>
+    
+    <div class="card" id="ram_card">
+        <div class="card-content">
+            <div class="card-title">RAM</div>
+            <div class="row"><span>LOAD</span> <span class="val" id="ram_percent">--%</span></div>
+            <div class="row"><span>USED</span> <span class="val" id="ram_used_total">-- / --GB</span></div>
         </div>
-        
+        <div class="meter-container">
+            <div class="meter-fill" id="ram_meter" style="height: 0%;"></div>
+        </div>
+    </div>
+    
+    <div class="card hidden" id="gpu_card">
+        <div class="card-content">
+            <div class="card-title">GPU</div>
+            <div class="row"><span>LOAD</span> <span class="val" id="gpu_usage">--%</span></div>
+            <div class="row"><span>VRAM</span> <span class="val" id="gpu_vram">--GB / --GB</span></div>
+            <div class="row"><span>TEMP</span> <span class="val" id="gpu_temp">--°C</span></div>
+        </div>
+        <div class="meter-container">
+            <div class="meter-fill" id="gpu_meter" style="height: 0%;"></div>
+        </div>
     </div>
 
     <script>
-        var isDragging = false;
-
         function updateData() {
             var xhr = new XMLHttpRequest();
             xhr.open('GET', '/data', true);
@@ -461,60 +342,32 @@ HTML_TEMPLATE = """
                     
                     // Update CPU
                     document.getElementById('cpu_overall').innerText = data.cpu_overall;
+                    document.getElementById('cpu_meter').style.height = data.cpu_raw_percent + '%';
+                    
                     if (data.cpu_temp) {
                         document.getElementById('cpu_temp').innerText = data.cpu_temp;
-                        document.getElementById('cpu_temp').classList.remove('hidden');
+                        document.getElementById('cpu_temp_row').classList.remove('hidden');
+                    } else {
+                        document.getElementById('cpu_temp_row').classList.add('hidden');
                     }
                     
                     // Update RAM
                     document.getElementById('ram_percent').innerText = data.ram_percent;
-                    document.getElementById('ram_used_total').innerText = data.ram_used;
+                    document.getElementById('ram_meter').style.height = data.ram_raw_percent + '%';
+                    document.getElementById('ram_used_total').innerText = data.ram_used + ' / ' + data.ram_total;
                     
                     // Update GPU
                     if (data.gpu) {
                         document.getElementById('gpu_usage').innerText = data.gpu.usage;
-                        document.getElementById('gpu_vram').innerText = data.gpu.vram_used;
+                        document.getElementById('gpu_meter').style.height = data.gpu.raw_percent + '%';
+                        document.getElementById('gpu_vram').innerText = data.gpu.vram_used + ' / ' + data.gpu.vram_total;
                         document.getElementById('gpu_temp').innerText = data.gpu.temp;
-                    }
-                    
-                    // Update Media
-                    if (data.media) {
-                        document.getElementById('media_title').innerText = data.media.title;
-                        if (data.media.art) {
-                            document.getElementById('album_img').src = data.media.art;
-                            document.getElementById('album_img').style.display = 'block';
-                            document.getElementById('album_placeholder').style.display = 'none';
-                        } else {
-                            document.getElementById('album_img').style.display = 'none';
-                            document.getElementById('album_placeholder').style.display = 'block';
-                        }
+                        document.getElementById('gpu_card').classList.remove('hidden');
                     } else {
-                        document.getElementById('media_title').innerText = "No Media";
-                        document.getElementById('album_img').style.display = 'none';
-                        document.getElementById('album_placeholder').style.display = 'block';
-                    }
-                    
-                    // Update Volume Slider (only if user is not currently dragging it)
-                    if (!isDragging) {
-                        document.getElementById('vol_slider').value = data.volume;
+                        document.getElementById('gpu_card').classList.add('hidden');
                     }
                 }
             };
-            xhr.send();
-        }
-
-        function sendMediaCmd(cmd) {
-            var xhr = new XMLHttpRequest();
-            xhr.open('POST', '/media_cmd?cmd=' + cmd, true);
-            xhr.send();
-        }
-
-        function setVolume(val) {
-            var xhr = new XMLHttpRequest();
-            xhr.open('POST', '/set_vol?level=' + val, true);
-            xhr.onload = function() {
-                isDragging = false; // Reset dragging state when server acknowledges volume change
-            }
             xhr.send();
         }
 
@@ -541,35 +394,14 @@ def index():
 def data():
     return jsonify({
         "cpu_overall": f"{latest_data['cpu_percent']:.1f}%",
+        "cpu_raw_percent": latest_data['cpu_percent'],
         "cpu_temp": latest_data["cpu_temp"],
         "ram_percent": f"{latest_data['ram_percent']:.1f}%",
+        "ram_raw_percent": latest_data['ram_percent'],
         "ram_used": f"{latest_data['ram_used']:.1f}GB",
         "ram_total": f"{latest_data['ram_total']:.1f}GB",
-        "gpu": latest_data["gpu_data"],
-        "media": latest_data["media"],
-        "volume": latest_data["volume"]
+        "gpu": latest_data["gpu_data"]
     })
-
-@app.route('/media_cmd', methods=['POST'])
-def media_cmd():
-    cmd = request.args.get('cmd')
-    if platform.system() == "Windows":
-        import ctypes
-        # VK_MEDIA_NEXT_TRACK = 0xB0, VK_MEDIA_PREV_TRACK = 0xB1, VK_MEDIA_PLAY_PAUSE = 0xB3
-        keys = {'next': 0xB0, 'prev': 0xB1, 'playpause': 0xB3}
-        if cmd in keys:
-            vk = keys[cmd]
-            # Media keys are 'Extended Keys' in Windows. We must pass 0x0001 (KEYEVENTF_EXTENDEDKEY)
-            ctypes.windll.user32.keybd_event(vk, 0, 1, 0)       # Key Down (Extended)
-            ctypes.windll.user32.keybd_event(vk, 0, 1 | 2, 0)   # Key Up (Extended + KeyUp)
-    return jsonify({"status": "ok"})
-
-@app.route('/set_vol', methods=['POST'])
-def set_vol():
-    level = request.args.get('level', type=int)
-    if level is not None:
-        set_master_volume(level)
-    return jsonify({"status": "ok"})
 
 if __name__ == '__main__':
     t = threading.Thread(target=bg_monitor, daemon=True)
